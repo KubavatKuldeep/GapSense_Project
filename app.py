@@ -1,11 +1,15 @@
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 
 # -----------------------------
-# Project Title
+# Page Config
 # -----------------------------
 st.set_page_config(page_title="GapSense", layout="centered")
 
+# -----------------------------
+# Title & Description
+# -----------------------------
 st.title("📊 GapSense")
 st.subheader("AI-powered Learning Gap Analyzer for Students")
 
@@ -45,28 +49,38 @@ questions = [
 st.header("📝 Student Assessment")
 
 user_answers = {}
-for i, q in enumerate(questions):
-    user_answers[i] = st.radio(q["q"], q["options"], index=None, key=f"q_{i}")
 
-  
+for i, q in enumerate(questions):
+    user_answers[i] = st.radio(
+        q["q"],
+        q["options"],
+        index=None,
+        key=f"q_{i}"
+    )
 
 # -----------------------------
-# Submit Button
+# Analyze Button
 # -----------------------------
 if st.button("🔍 Analyze My Learning Gaps"):
+
     topic_scores = {}
 
+    # -----------------------------
+    # Score Calculation
+    # -----------------------------
     for i, q in enumerate(questions):
         topic = q["topic"]
+
         if topic not in topic_scores:
             topic_scores[topic] = {"correct": 0, "total": 0}
 
         topic_scores[topic]["total"] += 1
+
         if user_answers[i] == q["answer"]:
             topic_scores[topic]["correct"] += 1
 
     # -----------------------------
-    # AI Logic: Gap Analysis
+    # AI Gap Analysis Logic
     # -----------------------------
     results = []
     recommendations = []
@@ -84,7 +98,7 @@ if st.button("🔍 Analyze My Learning Gaps"):
             level = "Strong"
             rec = "You can move to advanced concepts."
 
-        results.append([topic, f"{score:.0f}%", level])
+        results.append([topic, score, level])
         recommendations.append(f"📌 **{topic}**: {rec}")
 
     # -----------------------------
@@ -93,18 +107,48 @@ if st.button("🔍 Analyze My Learning Gaps"):
     st.header("📈 Learning Gap Analysis Result")
 
     df = pd.DataFrame(results, columns=["Topic", "Score", "Performance Level"])
+    df["Score"] = df["Score"].astype(int)
+
     st.table(df)
 
-    st.subheader("📊 Topic-wise Performance")
-    st.bar_chart(
-        {row[0]: int(row[1].replace("%", "")) for row in results}
+    # -----------------------------
+    # Colored Bar Chart (IMPORTANT PART)
+    # -----------------------------
+    st.subheader("📊 Topic-wise Performance (Difficulty Level)")
+
+    fig = px.bar(
+        df,
+        x="Topic",
+        y="Score",
+        color="Performance Level",
+        text="Score",
+        color_discrete_map={
+            "Weak": "red",
+            "Average": "orange",
+            "Strong": "green"
+        }
     )
 
+    fig.update_layout(
+        yaxis_title="Score (%)",
+        xaxis_title="Topic",
+        showlegend=True
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    # -----------------------------
+    # Recommendations
+    # -----------------------------
     st.subheader("🎯 Personalized Recommendations")
+
     for r in recommendations:
         st.write(r)
 
+    # -----------------------------
+    # Explainable AI Note
+    # -----------------------------
     st.info(
-        "🔍 **Explainable AI Note:** This system uses topic-wise performance analysis "
-        "and transparent rules to identify learning gaps."
+        "🔍 **Explainable AI Note:** This system uses transparent rule-based "
+        "topic-wise performance analysis to identify learning gaps."
     )
